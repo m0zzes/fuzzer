@@ -1,4 +1,6 @@
 import math
+from math import remainder
+
 
 class Tester:
 
@@ -24,16 +26,28 @@ class Tester:
     def test_case(self, start_index: int):
 
         indexes = []
+        r = start_index
         for i, wordlist in enumerate(self.wordlists):
 
-            if i == len(wordlist) - 1:
-                indexes.append((start_index % len(wordlist)) - 1)
+            """ 
+            
+            You must always count the remainder!
+            
+            """
+
+            if i == len(self.wordlists) - 1:
+                indexes.append((start_index % len(wordlist)))
             else:
-                indexes.append(start_index // math.prod([len(w) for w in self.wordlists[i+1::]]))
+                prod = math.prod([len(w) for w in self.wordlists[i+1::]])
+                indexes.append(r // prod)
+                r = r % prod
 
         result = ""
         for i, wordlist in enumerate(self.wordlists):
-            result += wordlist[indexes[i]]
+            try:
+                result += wordlist[indexes[i]]
+            except IndexError as e:
+                return result
 
         if start_index != 0 and result == self.test_case(0):
             return ""
@@ -53,12 +67,10 @@ if __name__ == "__main__":
 
     t = Tester([
         "/home/god/git/fuzzer/tests/alphabet",
-        "/home/god/git/fuzzer/tests/alphabet",
-        "/home/god/git/fuzzer/tests/alphabet",
-        "/home/god/git/fuzzer/tests/alphabet"
+        "/home/god/git/fuzzer/tests/numbers",
+        "/home/god/git/fuzzer/tests/binary",
     ])
 
-    c1 = t.test_cases_n(0, 10)
-    c2 = t.test_cases_n(100000000, 10)
+    c2 = t.test_cases_n(0, 1000)
 
     print("")
