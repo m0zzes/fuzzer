@@ -1,76 +1,74 @@
-import copy
-import re
-
-class Element:
-
-    def __init__(self, value: str):
-        self.value: str = value
-
-    def get(self) -> str:
-        return self.value
-
-class FuzzElement(Element):
-
-    def __init__(self, value: str, wordlist: list[str]):
-        super().__init__(value)
-        self.index = 0
-        self.wordlist: list[str] = wordlist
-
-    def get(self) -> str:
-        word = self.wordlist[self.index].strip()
-        self.index += 1
-        return word
+import math
 
 class Fuzzer:
 
     def __init__(self, config: dict):
         self.config = config
+        self.wordlists: list[tuple[str, str]] = self._read_wordlists()
 
-        self.wordlists: dict[str, list] = {}
-        self.read_wordlists()
+    def _get_single_test_case(self, index: int = 0) -> list[int]:
+        """Returns a single test-case based on the wordlists. A testcase is a list of indexes (integer) for a
+        combination of words from the wordlists.
+        """
 
-        self.host_fuzz_array = self.parse_string_into_elements(self.config.get("host"))
+        indexes = []
+        rest: int = index
+        for i, wordlist_tup in enumerate(self.wordlists):
+            if i == len(self.wordlists) - 1:
+                indexes.append(index % len(wordlist_tup[1]))
+            else:
+                prod = math.prod([len(v) for k,v in self.wordlists[i+1::]])
+                indexes.append(rest // prod)
+                rest = rest % prod
 
-    def get_host_testcases(self, n = 10) -> list[str]:
+        return indexes
+
+    def _get_n_test_cases(self, start_index: int = 0, n: int = 10) -> list[list[int]]:
+        """Returns n number of testcases (default=10) from start index (default=0)
+        """
 
         result = []
-
-        for i in range(n):
-            result.append("".join([fuzz_elem.get() for fuzz_elem in self.host_fuzz_array]))
+        for i in range(start_index, start_index + n):
+            test_case = self._get_single_test_case(i)
+            result.append(test_case)
 
         return result
 
-    def read_wordlists(self) -> None:
+    def parse_n_test_cases(self, index: int, n: int = 1) -> list[dict[str, str]]:
+        """Parses the indexes of n test-cases at index, breaks if indexes are out-of-range
+        """
 
-        for fuzz_key, wordlist_path in self.config.get("wordlists", {}).items():
-            with open(wordlist_path, "r") as ifile:
-                self.wordlists['{' + fuzz_key + '}'] = ifile.readlines()
+        test_cases: list[list[int]] = self._get_n_test_cases(index, n)
+        result = []
+        for test_case in test_cases:
+            fuzzing_table = {}
+            for i, wordlist_tup in enumerate(self.wordlists):
+                try:
+                    fuzzing_table[wordlist_tup[0]] = wordlist_tup[1][test_case[i]]
+                except IndexError:
+                    return result
 
-    def parse_string_into_elements(self, string: str) -> list[Element]:
+            result.append(fuzzing_table)
+
+        return result
+
+    def _read_wordlists(self) -> list[tuple[str, str]]:
+        """Reads all the wordlists and stores them together with the corresponding Fuzz-key
+        """
 
         result = []
+        for fuzz_key, wordlist_path in self.config.get("wordlists", {}).items():
+            with open(wordlist_path, "r") as ifile:
+                result.append(('{' + fuzz_key + '}', [l.strip() for l in ifile.readlines()]))
 
-        fuzz_variables = re.findall(pattern=r"{F\d+}", string=string)
+        return result
 
-        tmp_string: str = string
-        for i, fuzz_variable in enumerate(fuzz_variables):
+    def parse_host_argument(self, fuzzing_table: dict) -> str:
+        """
+        """
 
-            if fuzz_variable not in tmp_string:
-                break
-
-            segments = tmp_string.split(fuzz_variable)
-
-            # intersperse fuzz variables in the elements list
-            tmp_elements = [Element(s) for s in segments]
-            elements = [FuzzElement(fuzz_variable, self.wordlists[fuzz_variable])] * (len(tmp_elements) * 2 - 1)
-            elements[0::2] = tmp_elements
-
-            if elements[-1].value == "" or i != (len(fuzz_variables) - 1):
-                elements.pop(-1)
-
-            result.extend(elements)
-
-            # Continue searching for more fuzz_variables in the rest of the string
-            tmp_string = segments[-1]
+        result = self.config["host"]
+        for fuzz_key, fuzz_value in fuzzing_table.items():
+            result = result.replace(fuzz_key, fuzz_value)
 
         return result

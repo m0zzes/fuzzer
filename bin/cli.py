@@ -13,14 +13,17 @@ from fuzzer.core import Fuzzer
 
 if __name__ == "__main__":
     config = {
-        "host" : "example.com/{F1}/test/{F1}",
+        "host" : "example.com/{F1}/{F2}/{F3}",
         "headers" : {},
         "wordlists" : {
-            "F1" : "/home/god/git/fuzzer/tests/numbers",
-            "F2": "/home/god/git/fuzzer/tests/numbers"
+            "F1" : "/home/god/git/fuzzer/tests/alphabet",
+            "F2": "/home/god/git/fuzzer/tests/alphabet",
+            "F3": "/home/god/git/fuzzer/tests/alphabet"
         }
     }
     fuzzer = Fuzzer(config)
 
+    r = fuzzer.parse_n_test_cases(10000, 1000)
 
-    print(fuzzer.get_host_testcases(10))
+    for case in r:
+        print(fuzzer.parse_host_argument(case))
