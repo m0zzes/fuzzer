@@ -62,13 +62,3 @@ class Fuzzer:
                 result.append(('{' + fuzz_key + '}', [l.strip() for l in ifile.readlines()]))
 
         return result
-
-    def parse_host_argument(self, fuzzing_table: dict) -> str:
-        """
-        """
-
-        result = self.config["host"]
-        for fuzz_key, fuzz_value in fuzzing_table.items():
-            result = result.replace(fuzz_key, fuzz_value)
-
-        return result

@@ -1,4 +1,6 @@
 from fuzzer.core import Fuzzer
+from fuzzer.http_handlers.requests_handler import RequestsHandler
+from fuzzer.http_handlers.aiohttp_handler import AioHttpHandler
 
 """
     
@@ -7,23 +9,43 @@ from fuzzer.core import Fuzzer
     fuzzer --numbers /path --host example.com/FUZZ
     fuzzer --numbers /path,/path,/path --host example.com/FUZZ/FUZZ/FUZZ
     fuzzer --json /path
+   
+   
+   
+    FuzzEngine -> | RequestHandler <-> RequestObject | 
     
 
 """
 
 if __name__ == "__main__":
     config = {
-        "host" : "example.com/{F1}/{F2}/{F3}",
+        "host" : "https://www.example.com/{F1}/{F2}",
         "headers" : {},
         "wordlists" : {
-            "F1" : "/home/god/git/fuzzer/tests/alphabet",
-            "F2": "/home/god/git/fuzzer/tests/alphabet",
-            "F3": "/home/god/git/fuzzer/tests/alphabet"
+            "F1" : "/home/god/git/fuzzer/tests/numbers",
+            "F2": "/home/god/git/fuzzer/tests/numbers"
         }
     }
     fuzzer = Fuzzer(config)
 
-    r = fuzzer.parse_n_test_cases(10000, 1000)
+    fuzzing_tables = fuzzer.parse_n_test_cases(0, 100)
 
-    for case in r:
-        print(fuzzer.parse_host_argument(case))
+    # 78.76s execution time for 100 test cases (full request)
+    # 77.80s execution time for 100 test cases (head only)
+    rh = AioHttpHandler(
+        host=config["host"],
+        headers=config["headers"],
+        fuzzing_tables=fuzzing_tables,
+        filters=[]
+    ).run()
+
+
+    # 90.75s execution time for 100 test cases (head only)
+    """
+    rh2 = RequestsHandler(
+        host=config["host"],
+        headers=config["headers"],
+        fuzzing_tables=fuzzing_tables,
+        filters=[]
+    ).run()
+    """
