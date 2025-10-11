@@ -18,6 +18,6 @@ class AioHttpHandler(HttpHandler):
                 host = self._host(fuzzing_table)
                 headers = self._headers(fuzzing_table)
                 async with session.head(url=host, headers=headers) as response:
-                    print(f"{host} - {response.status}")
+                    self.report_response(response.status, host)
 
         self.end_timer()

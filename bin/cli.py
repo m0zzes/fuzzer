@@ -2,6 +2,13 @@ from fuzzer.core import Fuzzer
 from fuzzer.http_handlers.requests_handler import RequestsHandler
 from fuzzer.http_handlers.aiohttp_handler import AioHttpHandler
 
+import time
+
+# Threading
+import threading
+from concurrent.futures import ThreadPoolExecutor
+from multiprocessing import Pool
+
 """
     
     Intended usage.
@@ -18,34 +25,38 @@ from fuzzer.http_handlers.aiohttp_handler import AioHttpHandler
 """
 
 if __name__ == "__main__":
+
+    start_time = time.time()
+
     config = {
-        "host" : "https://www.example.com/{F1}/{F2}",
+        "host" : "http://hacknet.htb/{F1}",
+        "options" : {
+            "verbose" : True,
+            "pool_size" : 4,
+            "N" : 1000
+        },
         "headers" : {},
         "wordlists" : {
-            "F1" : "/home/god/git/fuzzer/tests/numbers",
-            "F2": "/home/god/git/fuzzer/tests/numbers"
+            "F1" : "/home/god/git/wordlists/wordlists/discovery/common.txt"
         }
     }
+
+    pool_size: int = config["options"]["pool_size"]
+    n: int = config["options"]["N"]
+
     fuzzer = Fuzzer(config)
+    fuzzing_tables = fuzzer.parse_n_test_cases(0, n)
 
-    fuzzing_tables = fuzzer.parse_n_test_cases(0, 100)
-
-    # 78.76s execution time for 100 test cases (full request)
-    # 77.80s execution time for 100 test cases (head only)
-    rh = AioHttpHandler(
+    handler = RequestsHandler(
         host=config["host"],
+        options=config["options"],
         headers=config["headers"],
         fuzzing_tables=fuzzing_tables,
         filters=[]
-    ).run()
+    )
 
 
-    # 90.75s execution time for 100 test cases (head only)
-    """
-    rh2 = RequestsHandler(
-        host=config["host"],
-        headers=config["headers"],
-        fuzzing_tables=fuzzing_tables,
-        filters=[]
-    ).run()
-    """
+    with Pool(pool_size) as multipool:
+        multipool.map(handler.run_one, fuzzing_tables)
+
+    print(f"Execution time: {time.time() - start_time}s")

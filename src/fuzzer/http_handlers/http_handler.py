@@ -4,8 +4,9 @@ class HttpHandler:
     """Core HTTP Handler
     """
 
-    def __init__(self, host: str, headers: dict, fuzzing_tables: list[dict], filters: list):
+    def __init__(self, host: str, options: dict, headers: dict, fuzzing_tables: list[dict], filters: list):
         self.host = host
+        self.options = options
         self.headers = headers
         self.fuzzing_tables = fuzzing_tables
         self.filters = filters
@@ -50,9 +51,22 @@ class HttpHandler:
     def end_timer(self):
         self.end_time = time.time()
         self.run_time = self.end_time - self.start_time
-        print(f"Execution time: {self.run_time}")
+        #print(f"Execution time: {self.run_time}")
+
+    def report_response(self, status_code: int, host: str):
+
+        if self.options.get("verbose", False):
+            print(f"{host} - {status_code}")
+            return
+
+        elif status_code in self.filters:
+            print(f"{host} - {status_code}")
+            return
+
+        return
 
     def run(self):
         pass
 
-
+    def run_one(self, fuzzing_table: dict):
+        pass
