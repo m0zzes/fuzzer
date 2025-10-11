@@ -1,2 +1,2 @@
 # fuzzer
-A simple website fuzzer writtenin Python
+A simple website fuzzer written in Python
