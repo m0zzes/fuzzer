@@ -1,62 +1,63 @@
-from fuzzer.core import Fuzzer
-from fuzzer.http_handlers.requests_handler import RequestsHandler
-from fuzzer.http_handlers.aiohttp_handler import AioHttpHandler
+import argparse
 
-import time
+argument_parser = argparse.ArgumentParser(
+    prog="Fuzzer",
+    description="Simple Website fuzzer written in Python",
+    epilog="Author: Matyas Barocsai"
+)
 
-# Threading
-import threading
-from concurrent.futures import ThreadPoolExecutor
-from multiprocessing import Pool
+argument_parser.add_argument(
+    "url",
+    help="Url to the target site, may contain FUZZ variables",
+    type=str
+)
 
-"""
-    
-    Intended usage.
-    
-    fuzzer --numbers /path --host example.com/FUZZ
-    fuzzer --numbers /path,/path,/path --host example.com/FUZZ/FUZZ/FUZZ
-    fuzzer --json /path
-   
-   
-   
-    FuzzEngine -> | RequestHandler <-> RequestObject | 
-    
+argument_parser.add_argument(
+    "-j",
+    "--json",
+    help="Json configuration containing all the arguments",
+    type=argparse.FileType("r")
+)
 
-"""
+argument_parser.add_argument(
+    "-H",
+    "--header",
+    help="Custom header to use in the requests, may contain FUZZ variables",
+    default={},
+    required=False
+)
 
-if __name__ == "__main__":
+argument_parser.add_argument(
+    "-w",
+    "--wordlists",
+    help="Wordlists to use when fuzzing, comma-separated list",
+    default="",
+    type=str,
+    required=False
+)
 
-    start_time = time.time()
+argument_parser.add_argument(
+    "-V",
+    "--verbose",
+    help="Log extra output for debugging",
+    default=False,
+    type=bool,
+    required=False
+)
 
-    config = {
-        "host" : "http://hacknet.htb/{F1}",
-        "options" : {
-            "verbose" : True,
-            "pool_size" : 4,
-            "N" : 1000
-        },
-        "headers" : {},
-        "wordlists" : {
-            "F1" : "/home/god/git/wordlists/wordlists/discovery/common.txt"
-        }
-    }
-
-    pool_size: int = config["options"]["pool_size"]
-    n: int = config["options"]["N"]
-
-    fuzzer = Fuzzer(config)
-    fuzzing_tables = fuzzer.parse_n_test_cases(0, n)
-
-    handler = RequestsHandler(
-        host=config["host"],
-        options=config["options"],
-        headers=config["headers"],
-        fuzzing_tables=fuzzing_tables,
-        filters=[]
-    )
+argument_parser.add_argument(
+    "-o",
+    "--output",
+    help="Output logs and results in a file",
+    default=False,
+    type=argparse.FileType("w"),
+    required=False
+)
 
 
-    with Pool(pool_size) as multipool:
-        multipool.map(handler.run_one, fuzzing_tables)
+if __name__ =="__main__":
+    args = argument_parser.parse_args()
 
-    print(f"Execution time: {time.time() - start_time}s")
+    # Parse comma-separated wordlists argument
+    if args.wordlists is not None:
+        args.wordlists = [w.strip() for w in args.wordlists.split(",")]
